@@ -1,4 +1,6 @@
 using System.ComponentModel.DataAnnotations;
+using System.Net.NetworkInformation;
+using System.Text;
 using System.Xml;
 using PacketDotNet;
 using SharpPcap;
@@ -39,31 +41,83 @@ public class Iface {
             Dev.Filter = filter;
 
         Dev.OnPacketArrival += OnPacketArrival;
-        Dev.Capture();
+        Dev.StartCapture();
+
+        while (Recv < Args.Number) {}
+
+        Dev.StopCapture();
+        Dev.Close();
     }
 
     private void OnPacketArrival(object s, PacketCapture e) {
+        Recv++;
         var rc = e.GetPacket();
         var packet = Packet.ParsePacket(rc.LinkLayerType, rc.Data);
-
         Console.WriteLine(packet);
+
+        var ethPacket = packet.Extract<EthernetPacket>();
+        var ipPacket = packet.Extract<IPPacket>();
+        var tcpPacket = packet.Extract<TcpPacket>();
+        var udpPacket = packet.Extract<UdpPacket>();
 
         var time = rc.Timeval.Date;
         var t = XmlConvert.ToString(time, XmlDateTimeSerializationMode.Utc);
-        var srcMac =
-            BitConverter.ToString(rc.Data, 6, 6).Replace("-", ":");
-        var dstMac =
-            BitConverter.ToString(rc.Data, 0, 6).Replace("-", ":");
-        var len = e.Data.Length;
 
-        ushort etherType = (ushort)((rc.Data[12] << 8) | rc.Data[13]);
+        var srcMac = BitConverter
+            .ToString(rc.Data.Take(6).ToArray())
+            .Replace("-", ":");
+        var dstMac = BitConverter
+            .ToString(rc.Data.Skip(6).Take(6).ToArray())
+            .Replace("-", ":");
 
         Console.WriteLine(
             $"timestamp: {t}\n" +
             $"src MAC: {srcMac}\n" +
             $"dst MAC: {dstMac}\n" +
-            $"frame length: {len}"
+            $"frame length: {rc.Data.Length} bytes\n" +
+            $"src IP: {ipPacket?.SourceAddress}\n" +
+            $"dst IP: {ipPacket?.DestinationAddress}"
         );
+
+        if (tcpPacket is not null) {
+            Console.WriteLine($"src port: {tcpPacket.SourcePort}");
+            Console.WriteLine($"dst port: {tcpPacket.DestinationPort}");
+        } else if (udpPacket is not null) {
+            Console.WriteLine($"src port: {udpPacket.SourcePort}");
+            Console.WriteLine($"dst port: {udpPacket.DestinationPort}");
+        }
+        Console.WriteLine();
+
+        Console.WriteLine(GetDataHex(packet.BytesSegment.Bytes));
+    }
+
+    private string GetDataHex(byte[] bytes) {
+        StringBuilder sb = new StringBuilder();
+        string text = "";
+        string text2 = "";
+        for (int i = 1; i <= bytes.Length; i++) {
+            text = text + bytes[i - 1].ToString("x").PadLeft(2, '0') + " ";
+            if (bytes[i - 1] >= 33 && bytes[i - 1] <= 126) {
+                var b = new byte[1] { bytes[i - 1] };
+                text2 += Encoding.ASCII.GetString(b);
+            } else {
+                text2 += ".";
+            }
+
+            if (i % 16 == 0) {
+                string text3 = ((i - 16) / 16 * 10).ToString().PadLeft(4, '0');
+                sb.AppendLine("0x" + text3 + ": " + text + " " + text2);
+                text = "";
+                text2 = "";
+            } else if (i == bytes.Length) {
+                string text3 =
+                    (((i - 16) / 16 + 1) * 10).ToString().PadLeft(4, '0');
+                sb.AppendLine(
+                    "0x" + text3 + ": " + text.PadRight(49, ' ') + " " + text2
+                );
+            }
+        }
+        return sb.ToString();
     }
 
     /// <summary>

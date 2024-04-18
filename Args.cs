@@ -75,7 +75,9 @@ public class Args {
                     Number = ParseArg<uint>(args[0]);
                     break;
                 default:
-                    break;
+                    throw new ArgumentException(
+                        $"unknown argument '{args[0]}'"
+                    );
             }
             args = args[1..];
         }
