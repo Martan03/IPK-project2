@@ -1,6 +1,4 @@
-﻿using SharpPcap;
-
-namespace IPK_project1;
+﻿namespace IPK_project1;
 
 class Program
 {
@@ -8,16 +6,10 @@ class Program
         Args args = new(argv);
 
         if (args.DisplayIfaces()) {
-            DisplayIfaces();
+            Iface.ListIfaces();
+        } else {
+            Iface iface = new(args);
+            iface.Sniff();
         }
-    }
-
-    /// <summary>
-    /// Displays interfaces
-    /// </summary>
-    static void DisplayIfaces() {
-        var devices = CaptureDeviceList.Instance;
-        foreach (var dev in devices)
-            Console.WriteLine($"{dev.Name}");
     }
 }
