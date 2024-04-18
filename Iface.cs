@@ -1,5 +1,3 @@
-using System.ComponentModel.DataAnnotations;
-using System.Net.NetworkInformation;
 using System.Text;
 using System.Xml;
 using PacketDotNet;
@@ -50,12 +48,15 @@ public class Iface {
     }
 
     private void OnPacketArrival(object s, PacketCapture e) {
+        if (Recv >= Args.Number)
+            return;
+
         Recv++;
         var rc = e.GetPacket();
         var packet = Packet.ParsePacket(rc.LinkLayerType, rc.Data);
-        Console.WriteLine(packet);
 
         var ethPacket = packet.Extract<EthernetPacket>();
+        var sslPacket = packet.Extract<LinuxSllPacket>();
         var ipPacket = packet.Extract<IPPacket>();
         var tcpPacket = packet.Extract<TcpPacket>();
         var udpPacket = packet.Extract<UdpPacket>();
@@ -63,21 +64,34 @@ public class Iface {
         var time = rc.Timeval.Date;
         var t = XmlConvert.ToString(time, XmlDateTimeSerializationMode.Utc);
 
-        var srcMac = BitConverter
-            .ToString(rc.Data.Take(6).ToArray())
-            .Replace("-", ":");
-        var dstMac = BitConverter
-            .ToString(rc.Data.Skip(6).Take(6).ToArray())
-            .Replace("-", ":");
+        Console.WriteLine($"timestamp: {t}");
 
-        Console.WriteLine(
-            $"timestamp: {t}\n" +
-            $"src MAC: {srcMac}\n" +
-            $"dst MAC: {dstMac}\n" +
-            $"frame length: {rc.Data.Length} bytes\n" +
-            $"src IP: {ipPacket?.SourceAddress}\n" +
-            $"dst IP: {ipPacket?.DestinationAddress}"
-        );
+        if (ethPacket is not null) {
+            var srcMac = BitConverter
+                .ToString(ethPacket.SourceHardwareAddress.GetAddressBytes())
+                .Replace('-', ':');
+            var dstMac = BitConverter
+                .ToString(ethPacket.DestinationHardwareAddress.GetAddressBytes())
+                .Replace('-', ':');
+            Console.WriteLine(
+                $"src MAC: {srcMac}\n" +
+                $"dst MAC: {dstMac}"
+            );
+        } else if (sslPacket is not null) {
+            var mac = BitConverter
+                .ToString(sslPacket.LinkLayerAddress)
+                .Replace('-', ':');
+            Console.WriteLine($"src MAC: {mac}");
+        }
+
+        Console.WriteLine($"frame length: {rc.Data.Length} bytes");
+
+        if (ipPacket is not null) {
+            Console.WriteLine(
+                $"src IP: {ipPacket.SourceAddress}\n" +
+                $"dst IP: {ipPacket.DestinationAddress}"
+            );
+        }
 
         if (tcpPacket is not null) {
             Console.WriteLine($"src port: {tcpPacket.SourcePort}");
