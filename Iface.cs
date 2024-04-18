@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Xml;
 using PacketDotNet;
 using SharpPcap;
@@ -33,6 +34,10 @@ public class Iface {
     /// </summary>
     public void Sniff() {
         Dev.Open(DeviceModes.Promiscuous);
+        var filter = GetFilter();
+        if (filter.Length > 0)
+            Dev.Filter = filter;
+
         Dev.OnPacketArrival += OnPacketArrival;
         Dev.Capture();
     }
@@ -75,5 +80,38 @@ public class Iface {
         }
 
         throw new ArgumentException($"interface '{name}' not found");
+    }
+
+    private string GetFilter() {
+        List<string> filters = new();
+        string ports = GetPorts();
+
+        foreach (var filt in Args.Filters) {
+            filters.Add(filt switch {
+                Filter.Tcp => "tcp" + ports,
+                Filter.Udp => "udp" + ports,
+                Filter.Icmp4 => "icmp",
+                Filter.Icmp6 => "icmp6",
+                Filter.Arp => "arp",
+                // TODO
+                Filter.Ndp => "icmp6",
+                Filter.Igmp => "igmp",
+                // TODO
+                Filter.Mld => "icmp6",
+                _ => throw new NotImplementedException(),
+            });
+        }
+        return string.Join(" or ", filters);
+    }
+
+    private string GetPorts() {
+        string ports = "";
+        if (Args.DstPort is not null) {
+            ports += $" and dst port {Args.DstPort}";
+        }
+        if (Args.SrcPort is not null) {
+            ports += $" and src port {Args.SrcPort}";
+        }
+        return ports;
     }
 }
