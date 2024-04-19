@@ -1,6 +1,8 @@
 using System.Text;
 using System.Xml;
 using PacketDotNet;
+using PacketDotNet.Ieee80211;
+using PacketDotNet.Utils;
 using SharpPcap;
 
 /// <summary>
@@ -47,91 +49,17 @@ public class Iface {
         Dev.Close();
     }
 
+    /// <summary>
+    /// Packet arrival handler - prints packet information
+    /// </summary>
+    /// <param name="s">source of the event</param>
+    /// <param name="e">captured packet</param>
     private void OnPacketArrival(object s, PacketCapture e) {
-        if (Recv >= Args.Number)
+        if (Recv++ >= Args.Number)
             return;
 
-        Recv++;
         var rc = e.GetPacket();
-        var packet = Packet.ParsePacket(rc.LinkLayerType, rc.Data);
-
-        var ethPacket = packet.Extract<EthernetPacket>();
-        var sslPacket = packet.Extract<LinuxSllPacket>();
-        var ipPacket = packet.Extract<IPPacket>();
-        var tcpPacket = packet.Extract<TcpPacket>();
-        var udpPacket = packet.Extract<UdpPacket>();
-
-        var time = rc.Timeval.Date;
-        var t = XmlConvert.ToString(time, XmlDateTimeSerializationMode.Utc);
-
-        Console.WriteLine($"timestamp: {t}");
-
-        if (ethPacket is not null) {
-            var srcMac = BitConverter
-                .ToString(ethPacket.SourceHardwareAddress.GetAddressBytes())
-                .Replace('-', ':');
-            var dstMac = BitConverter
-                .ToString(ethPacket.DestinationHardwareAddress.GetAddressBytes())
-                .Replace('-', ':');
-            Console.WriteLine(
-                $"src MAC: {srcMac}\n" +
-                $"dst MAC: {dstMac}"
-            );
-        } else if (sslPacket is not null) {
-            var mac = BitConverter
-                .ToString(sslPacket.LinkLayerAddress)
-                .Replace('-', ':');
-            Console.WriteLine($"src MAC: {mac}");
-        }
-
-        Console.WriteLine($"frame length: {rc.Data.Length} bytes");
-
-        if (ipPacket is not null) {
-            Console.WriteLine(
-                $"src IP: {ipPacket.SourceAddress}\n" +
-                $"dst IP: {ipPacket.DestinationAddress}"
-            );
-        }
-
-        if (tcpPacket is not null) {
-            Console.WriteLine($"src port: {tcpPacket.SourcePort}");
-            Console.WriteLine($"dst port: {tcpPacket.DestinationPort}");
-        } else if (udpPacket is not null) {
-            Console.WriteLine($"src port: {udpPacket.SourcePort}");
-            Console.WriteLine($"dst port: {udpPacket.DestinationPort}");
-        }
-        Console.WriteLine();
-
-        Console.WriteLine(GetDataHex(packet.BytesSegment.Bytes));
-    }
-
-    private string GetDataHex(byte[] bytes) {
-        StringBuilder sb = new StringBuilder();
-        string text = "";
-        string text2 = "";
-        for (int i = 1; i <= bytes.Length; i++) {
-            text = text + bytes[i - 1].ToString("x").PadLeft(2, '0') + " ";
-            if (bytes[i - 1] >= 33 && bytes[i - 1] <= 126) {
-                var b = new byte[1] { bytes[i - 1] };
-                text2 += Encoding.ASCII.GetString(b);
-            } else {
-                text2 += ".";
-            }
-
-            if (i % 16 == 0) {
-                string text3 = ((i - 16) / 16 * 10).ToString().PadLeft(4, '0');
-                sb.AppendLine("0x" + text3 + ": " + text + " " + text2);
-                text = "";
-                text2 = "";
-            } else if (i == bytes.Length) {
-                string text3 =
-                    (((i - 16) / 16 + 1) * 10).ToString().PadLeft(4, '0');
-                sb.AppendLine(
-                    "0x" + text3 + ": " + text.PadRight(49, ' ') + " " + text2
-                );
-            }
-        }
-        return sb.ToString();
+        SniffPacket.Info(rc);
     }
 
     /// <summary>
@@ -150,6 +78,10 @@ public class Iface {
         throw new ArgumentException($"interface '{name}' not found");
     }
 
+    /// <summary>
+    /// Gets filter string
+    /// </summary>
+    /// <returns>String containing the filter</returns>
     private string GetFilter() {
         List<string> filters = new();
         string ports = GetPorts();
@@ -166,12 +98,16 @@ public class Iface {
                 Filter.Igmp => "igmp",
                 // TODO
                 Filter.Mld => "icmp6",
-                _ => throw new NotImplementedException(),
+                _ => "",
             });
         }
         return string.Join(" or ", filters);
     }
 
+    /// <summary>
+    /// Gets port string for filter
+    /// </summary>
+    /// <returns>Port filter</returns>
     private string GetPorts() {
         string ports = "";
         if (Args.DstPort is not null) {
