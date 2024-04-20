@@ -9,6 +9,7 @@ using SharpPcap;
 /// Class implementing functionality over interface
 /// </summary>
 public class Iface {
+    private SniffPacket sniffer { get; set; }
     private Args Args { get; set; }
     private ILiveDevice Dev {get; set;}
     private uint Recv { get; set; } = 0;
@@ -18,6 +19,7 @@ public class Iface {
     /// </summary>
     /// <param name="args"></param>
     public Iface(Args args) {
+        sniffer = new(args);
         Args = args;
         Dev = GetIface(args.Interface!);
     }
@@ -59,7 +61,7 @@ public class Iface {
             return;
 
         var rc = e.GetPacket();
-        SniffPacket.Info(rc);
+        sniffer.Info(rc);
     }
 
     /// <summary>

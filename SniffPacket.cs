@@ -4,12 +4,18 @@ using PacketDotNet;
 using PacketDotNet.Utils;
 using SharpPcap;
 
-public static class SniffPacket {
+public class SniffPacket {
+    private Args Args { get; set; }
+
+    public SniffPacket(Args args) {
+        Args = args;
+    }
+
     /// <summary>
     /// Prints info about the packet
     /// </summary>
     /// <param name="rc">RawCapture</param>
-    public static void Info(RawCapture rc) {
+    public void Info(RawCapture rc) {
         Timestamp(rc);
         Console.WriteLine($"frame length: {rc.Data.Length} bytes");
         Mac(rc);
@@ -26,7 +32,7 @@ public static class SniffPacket {
     /// Prints packet timestamp
     /// </summary>
     /// <param name="rc">RawCapture</param>
-    private static void Timestamp(RawCapture rc) {
+    private void Timestamp(RawCapture rc) {
         var time = rc.Timeval.Date;
         var t = XmlConvert.ToString(time, XmlDateTimeSerializationMode.Utc);
         Console.WriteLine($"timestamp: {t}");
@@ -36,7 +42,7 @@ public static class SniffPacket {
     /// Prints MAC address of packet if possible
     /// </summary>
     /// <param name="rc">RawCapture</param>
-    private static void Mac(RawCapture rc) {
+    private void Mac(RawCapture rc) {
         var byteSegment = new ByteArraySegment(rc.Data);
         switch (rc.LinkLayerType) {
             case LinkLayers.Ethernet:
@@ -54,7 +60,7 @@ public static class SniffPacket {
     /// Prints source and destination IP if possible
     /// </summary>
     /// <param name="packet">Packet</param>
-    private static void Ip(Packet packet) {
+    private void Ip(Packet packet) {
         var ipPacket = packet.Extract<IPPacket>();
         if (ipPacket is not null) {
             Console.WriteLine(
@@ -68,7 +74,7 @@ public static class SniffPacket {
     /// Prints source and destination port if possible
     /// </summary>
     /// <param name="packet">Packet</param>
-    private static void Port(Packet packet) {
+    private void Port(Packet packet) {
         TcpPacket? tcpPacket;
         UdpPacket? udpPacket;
         if ((tcpPacket = packet.Extract<TcpPacket>()) is not null) {
@@ -84,7 +90,7 @@ public static class SniffPacket {
     /// Prints hex data of the packet
     /// </summary>
     /// <param name="packet">Packet</param>
-    private static void HexData(Packet packet) {
+    private void HexData(Packet packet) {
         var bytes = packet.BytesSegment.Bytes;
 
         var sb = new StringBuilder();
@@ -119,7 +125,7 @@ public static class SniffPacket {
     /// Prints source and destination MAC address of Ethernet packet
     /// </summary>
     /// <param name="packet">Ethernet packet</param>
-    private static void Ethernet(EthernetPacket packet) {
+    private void Ethernet(EthernetPacket packet) {
         var srcMac = BitConverter
             .ToString(packet.SourceHardwareAddress.GetAddressBytes())
             .Replace('-', ':');
@@ -131,67 +137,71 @@ public static class SniffPacket {
             $"dst MAC: {dstMac}"
         );
 
-        EthType(packet);
+        HandleEth(packet);
     }
 
     /// <summary>
     /// Prints source MAC of LinuxSll packet
     /// </summary>
     /// <param name="packet">LinuxSll packet</param>
-    private static void LinuxSll(LinuxSllPacket packet) {
+    private void LinuxSll(LinuxSllPacket packet) {
         var mac = BitConverter
             .ToString(packet.LinkLayerAddress)
             .Replace('-', ':');
         Console.WriteLine($"src MAC: {mac}");
     }
 
-    private static void EthType(EthernetPacket packet) {
+    private void HandleEth(EthernetPacket packet) {
         switch (packet.Type) {
-            case EthernetType.IPv4:
-                Console.WriteLine("IPv4 packet");
-                break;
             case EthernetType.IPv6:
-                Console.WriteLine("IPv6 packet");
                 HandleIP(packet.Extract<IPPacket>());
                 break;
-            case EthernetType.Arp:
-                Console.WriteLine("Arp packet");
-                break;
             default:
+                Ip(packet);
+                Port(packet);
                 break;
         }
     }
 
-    private static void HandleIP(IPPacket packet) {
+    private void HandleIP(IPPacket packet) {
         switch (packet.Protocol) {
-            case ProtocolType.Tcp:
-                break;
-            case ProtocolType.Udp:
-                break;
             case ProtocolType.IcmpV6:
                 HandleIcmp6(packet.Extract<IcmpV6Packet>());
                 break;
             default:
+                Ip(packet);
+                Port(packet);
                 break;
         }
     }
 
-    private static void HandleIcmp6(IcmpV6Packet packet) {
+    private bool HandleIcmp6(IcmpV6Packet packet) {
         switch (packet.Type) {
+            /// MLD
             case IcmpV6Type.MulticastListenerQuery:
             case IcmpV6Type.MulticastListenerReport:
             case IcmpV6Type.MulticastListenerDone:
-                Console.WriteLine("MLD packet");
+                if (!Args.IsFiltered(Filter.Mld))
+                    return false;
+
+                Ip(packet);
+                Port(packet);
                 break;
+            /// NDP
             case IcmpV6Type.RouterSolicitation:
             case IcmpV6Type.RouterAdvertisement:
             case IcmpV6Type.NeighborSolicitation:
             case IcmpV6Type.NeighborAdvertisement:
             case IcmpV6Type.RedirectMessage:
-                Console.WriteLine("NDP packet");
+                if (!Args.IsFiltered(Filter.Ndp))
+                    return false;
+
+                Ip(packet);
+                Port(packet);
                 break;
             default:
                 break;
         }
+        return true;
     }
 }

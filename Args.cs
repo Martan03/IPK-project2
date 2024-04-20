@@ -96,6 +96,19 @@ public class Args {
     }
 
     /// <summary>
+    /// Checks if given filter is set or not
+    /// </summary>
+    /// <param name="filter">Filter to check</param>
+    /// <returns>true when filter is set, else false</returns>
+    public bool IsFiltered(Filter filter) {
+        foreach (var f in Filters) {
+            if (f == filter)
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>
     /// Move span to next argument
     /// </summary>
     /// <param name="args">Span with arguments</param>
