@@ -1,96 +1,62 @@
+using System.Net;
 using System.Text;
 using System.Xml;
 using PacketDotNet;
-using PacketDotNet.Utils;
-using SharpPcap;
 
 public class SniffPacket {
-    private Args Args { get; set; }
+    public string Timestamp { get; set; }
+    public int FrameLen { get; set; }
+    public string? SrcMac { get; set; }
+    public string? DstMac { get; set; }
+    public IPAddress? SrcIp { get; set; }
+    public IPAddress? DstIp { get; set; }
+    public ushort? SrcPort { get; set; }
+    public ushort? DstPort { get; set; }
+    public string HexData { get; set; } = "";
 
-    public SniffPacket(Args args) {
-        Args = args;
+    public SniffPacket(DateTime timestamp, int frameLen) {
+        Timestamp = ConvTimestamp(timestamp);
+        FrameLen = frameLen;
+    }
+
+    public override string ToString() {
+        var res = $"timestamp: {Timestamp}\n";
+
+        if (SrcMac is not null)
+            res += $"src MAC: {SrcMac}\n";
+        if (DstMac is not null)
+            res += $"dst MAC: {DstMac}\n";
+
+        res += $"frame length: {FrameLen} bytes\n";
+
+        if (SrcIp is not null)
+            res += $"src IP: {SrcIp}\n";
+        if (DstIp is not null)
+            res += $"dst IP: {DstIp}\n";
+
+        if (SrcPort is not null)
+            res += $"src IP: {SrcPort}\n";
+        if (DstPort is not null)
+            res += $"dst IP: {DstPort}\n";
+
+        res += $"\n{HexData}";
+        return res;
     }
 
     /// <summary>
-    /// Prints info about the packet
+    /// Converts datetime to its string representation
     /// </summary>
-    /// <param name="rc">RawCapture</param>
-    public void Info(RawCapture rc) {
-        Timestamp(rc);
-        Console.WriteLine($"frame length: {rc.Data.Length} bytes");
-        Mac(rc);
-    /*
-        var packet = Packet.ParsePacket(rc.LinkLayerType, rc.Data);
-        Ip(packet);
-        Port(packet);
-
-        Console.WriteLine();
-        HexData(packet);*/
+    /// <param name="datetime">Datime to convert</param>
+    /// <returns>String representation</returns>
+    public static string ConvTimestamp(DateTime datetime) {
+        return XmlConvert.ToString(datetime, XmlDateTimeSerializationMode.Utc);
     }
 
     /// <summary>
-    /// Prints packet timestamp
-    /// </summary>
-    /// <param name="rc">RawCapture</param>
-    private void Timestamp(RawCapture rc) {
-        var time = rc.Timeval.Date;
-        var t = XmlConvert.ToString(time, XmlDateTimeSerializationMode.Utc);
-        Console.WriteLine($"timestamp: {t}");
-    }
-
-    /// <summary>
-    /// Prints MAC address of packet if possible
-    /// </summary>
-    /// <param name="rc">RawCapture</param>
-    private void Mac(RawCapture rc) {
-        var byteSegment = new ByteArraySegment(rc.Data);
-        switch (rc.LinkLayerType) {
-            case LinkLayers.Ethernet:
-                Ethernet(new EthernetPacket(byteSegment));
-                break;
-            case LinkLayers.LinuxSll:
-                LinuxSll(new LinuxSllPacket(byteSegment));
-                break;
-            default:
-                break;
-        }
-    }
-
-    /// <summary>
-    /// Prints source and destination IP if possible
+    /// Sets hex data of the sniffed packet
     /// </summary>
     /// <param name="packet">Packet</param>
-    private void Ip(Packet packet) {
-        var ipPacket = packet.Extract<IPPacket>();
-        if (ipPacket is not null) {
-            Console.WriteLine(
-                $"src IP: {ipPacket.SourceAddress}\n" +
-                $"dst IP: {ipPacket.DestinationAddress}"
-            );
-        }
-    }
-
-    /// <summary>
-    /// Prints source and destination port if possible
-    /// </summary>
-    /// <param name="packet">Packet</param>
-    private void Port(Packet packet) {
-        TcpPacket? tcpPacket;
-        UdpPacket? udpPacket;
-        if ((tcpPacket = packet.Extract<TcpPacket>()) is not null) {
-            Console.WriteLine($"src port: {tcpPacket.SourcePort}");
-            Console.WriteLine($"dst port: {tcpPacket.DestinationPort}");
-        } else if ((udpPacket = packet.Extract<UdpPacket>()) is not null) {
-            Console.WriteLine($"src port: {udpPacket.SourcePort}");
-            Console.WriteLine($"dst port: {udpPacket.DestinationPort}");
-        }
-    }
-
-    /// <summary>
-    /// Prints hex data of the packet
-    /// </summary>
-    /// <param name="packet">Packet</param>
-    private void HexData(Packet packet) {
+    public void SetHexData(Packet packet) {
         var bytes = packet.BytesSegment.Bytes;
 
         var sb = new StringBuilder();
@@ -118,90 +84,6 @@ public class SniffPacket {
                 );
             }
         }
-        Console.WriteLine(sb);
-    }
-
-    /// <summary>
-    /// Prints source and destination MAC address of Ethernet packet
-    /// </summary>
-    /// <param name="packet">Ethernet packet</param>
-    private void Ethernet(EthernetPacket packet) {
-        var srcMac = BitConverter
-            .ToString(packet.SourceHardwareAddress.GetAddressBytes())
-            .Replace('-', ':');
-        var dstMac = BitConverter
-            .ToString(packet.DestinationHardwareAddress.GetAddressBytes())
-            .Replace('-', ':');
-        Console.WriteLine(
-            $"src MAC: {srcMac}\n" +
-            $"dst MAC: {dstMac}"
-        );
-
-        HandleEth(packet);
-    }
-
-    /// <summary>
-    /// Prints source MAC of LinuxSll packet
-    /// </summary>
-    /// <param name="packet">LinuxSll packet</param>
-    private void LinuxSll(LinuxSllPacket packet) {
-        var mac = BitConverter
-            .ToString(packet.LinkLayerAddress)
-            .Replace('-', ':');
-        Console.WriteLine($"src MAC: {mac}");
-    }
-
-    private void HandleEth(EthernetPacket packet) {
-        switch (packet.Type) {
-            case EthernetType.IPv6:
-                HandleIP(packet.Extract<IPPacket>());
-                break;
-            default:
-                Ip(packet);
-                Port(packet);
-                break;
-        }
-    }
-
-    private void HandleIP(IPPacket packet) {
-        switch (packet.Protocol) {
-            case ProtocolType.IcmpV6:
-                HandleIcmp6(packet.Extract<IcmpV6Packet>());
-                break;
-            default:
-                Ip(packet);
-                Port(packet);
-                break;
-        }
-    }
-
-    private bool HandleIcmp6(IcmpV6Packet packet) {
-        switch (packet.Type) {
-            /// MLD
-            case IcmpV6Type.MulticastListenerQuery:
-            case IcmpV6Type.MulticastListenerReport:
-            case IcmpV6Type.MulticastListenerDone:
-                if (!Args.IsFiltered(Filter.Mld))
-                    return false;
-
-                Ip(packet);
-                Port(packet);
-                break;
-            /// NDP
-            case IcmpV6Type.RouterSolicitation:
-            case IcmpV6Type.RouterAdvertisement:
-            case IcmpV6Type.NeighborSolicitation:
-            case IcmpV6Type.NeighborAdvertisement:
-            case IcmpV6Type.RedirectMessage:
-                if (!Args.IsFiltered(Filter.Ndp))
-                    return false;
-
-                Ip(packet);
-                Port(packet);
-                break;
-            default:
-                break;
-        }
-        return true;
+        HexData = sb.ToString();
     }
 }

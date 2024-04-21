@@ -1,15 +1,10 @@
-using System.Text;
-using System.Xml;
-using PacketDotNet;
-using PacketDotNet.Ieee80211;
-using PacketDotNet.Utils;
 using SharpPcap;
 
 /// <summary>
 /// Class implementing functionality over interface
 /// </summary>
 public class Iface {
-    private SniffPacket sniffer { get; set; }
+    private Sniffer sniffer { get; set; }
     private Args Args { get; set; }
     private ILiveDevice Dev {get; set;}
     private uint Recv { get; set; } = 0;
@@ -57,11 +52,12 @@ public class Iface {
     /// <param name="s">source of the event</param>
     /// <param name="e">captured packet</param>
     private void OnPacketArrival(object s, PacketCapture e) {
-        if (Recv++ >= Args.Number)
+        if (Recv >= Args.Number)
             return;
 
         var rc = e.GetPacket();
-        sniffer.Info(rc);
+        if (sniffer.Info(rc))
+            Recv++;
     }
 
     /// <summary>
