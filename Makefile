@@ -5,7 +5,7 @@ build:
 	mv bin/Release/*/*/publish/IPK-project2 ipk-sniffer
 
 submit:
-	zip -r xsleza26.zip *.cs CHANGELOG.md \
+	zip -r xsleza26.zip *.cs CHANGELOG.md ipk2-cd.drawio.png \
 		IPK-project2.csproj LICENSE Makefile README.md
 
 clean:
