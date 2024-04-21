@@ -30,9 +30,9 @@ public class Sniffer {
         return rc.LinkLayerType switch {
             LinkLayers.Ethernet =>
                 Ethernet(sp, new EthernetPacket(byteSegment)),
-            LinkLayers.LinuxSll =>
-                LinuxSll(sp, new LinuxSllPacket(byteSegment)),
-            _ => null,
+            _ => throw new NotSupportedException(
+                "only Ethernet link layer is supported"
+            ),
         };
     }
 
@@ -50,17 +50,6 @@ public class Sniffer {
             .Replace('-', ':');
 
         return HandleEth(sp, packet);
-    }
-
-    /// <summary>
-    /// Prints source MAC of LinuxSll packet
-    /// </summary>
-    /// <param name="packet">LinuxSll packet</param>
-    private SniffPacket? LinuxSll(SniffPacket sp, LinuxSllPacket packet) {
-        sp.SrcMac = BitConverter
-            .ToString(packet.LinkLayerAddress)
-            .Replace('-', ':');
-        return sp;
     }
 
     private SniffPacket? HandleEth(SniffPacket sp, EthernetPacket packet) {

@@ -89,13 +89,9 @@ public class Iface {
                 Filter.Tcp => "tcp" + ports,
                 Filter.Udp => "udp" + ports,
                 Filter.Icmp4 => "icmp",
-                Filter.Icmp6 => "icmp6",
+                Filter.Icmp6 or Filter.Ndp or Filter.Mld => "icmp6",
                 Filter.Arp => "arp",
-                // TODO
-                Filter.Ndp => "icmp6",
                 Filter.Igmp => "igmp",
-                // TODO
-                Filter.Mld => "icmp6",
                 _ => "",
             });
         }

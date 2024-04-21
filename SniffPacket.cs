@@ -44,15 +44,6 @@ public class SniffPacket {
     }
 
     /// <summary>
-    /// Converts datetime to its string representation
-    /// </summary>
-    /// <param name="datetime">Datime to convert</param>
-    /// <returns>String representation</returns>
-    public static string ConvTimestamp(DateTime datetime) {
-        return XmlConvert.ToString(datetime, XmlDateTimeSerializationMode.Utc);
-    }
-
-    /// <summary>
     /// Sets hex data of the sniffed packet
     /// </summary>
     /// <param name="packet">Packet</param>
@@ -85,5 +76,14 @@ public class SniffPacket {
             }
         }
         HexData = sb.ToString();
+    }
+
+    /// <summary>
+    /// Converts datetime to its string representation
+    /// </summary>
+    /// <param name="datetime">Datime to convert</param>
+    /// <returns>String representation</returns>
+    private static string ConvTimestamp(DateTime datetime) {
+        return XmlConvert.ToString(datetime, XmlDateTimeSerializationMode.Utc);
     }
 }
