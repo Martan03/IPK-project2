@@ -53,6 +53,9 @@ public class Sniffer {
     }
 
     private SniffPacket? HandleEth(SniffPacket sp, EthernetPacket packet) {
+        // Can check ndppacket right away
+        var p = packet.Extract<NdpPacket>();
+        Console.WriteLine(p);
         return packet.Type switch {
             EthernetType.IPv6 => HandleIP(sp, packet.Extract<IPPacket>()),
             _ => HandleDefault(sp, packet),
