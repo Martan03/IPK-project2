@@ -104,12 +104,12 @@ public class Iface {
     /// <returns>Port filter</returns>
     private string GetPorts() {
         string ports = "";
-        if (Args.DstPort is not null) {
+        if (Args.Port is not null)
+            ports += $" and port {Args.Port}";
+        if (Args.DstPort is not null)
             ports += $" and dst port {Args.DstPort}";
-        }
-        if (Args.SrcPort is not null) {
+        if (Args.SrcPort is not null)
             ports += $" and src port {Args.SrcPort}";
-        }
         return ports;
     }
 }

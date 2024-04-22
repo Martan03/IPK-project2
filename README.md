@@ -56,14 +56,14 @@ Enumeration which helps handling filters. It contains options for all supported
 filter type.
 
 ## Testing
-Since the SharpPCAP library handled basically all the packet parsing for me,
-there's not that much to test.
+I created basic Python script, that starts the `ipk-sniffer` binary with
+some arguments and then sends packet. Output of the sniffer is then checked,
+whether it contains expected values.
 
-In order to test whether correct data are displayed, I sniffed packets using
-this program and with wireshark and compared the results.
+I also send a different protocol type packet in order to check whether
+packet filtering works.
 
-To test the filters, I added packet protocol printing and checked, whether it
-matches the filter that was set.
+The script name is `test.py` and can be seen in `tests` folder.
 
 ## Bibliography
 - [SharpPCAP (library I used)](https://github.com/dotpcap/sharppcap)

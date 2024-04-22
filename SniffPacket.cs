@@ -35,9 +35,9 @@ public class SniffPacket {
             res += $"dst IP: {DstIp}\n";
 
         if (SrcPort is not null)
-            res += $"src IP: {SrcPort}\n";
+            res += $"src port: {SrcPort}\n";
         if (DstPort is not null)
-            res += $"dst IP: {DstPort}\n";
+            res += $"dst port: {DstPort}\n";
 
         res += $"\n{HexData}";
         return res;

@@ -4,6 +4,7 @@
 public class Args {
     public string? Interface { get; set; }
     public List<Filter> Filters { get; set; } = new();
+    public ushort? Port { get; set; } = null;
     public ushort? DstPort { get; set; } = null;
     public ushort? SrcPort { get; set; } = null;
     public uint Number { get; set; } = 1;
@@ -41,8 +42,7 @@ public class Args {
                     break;
                 case "-p":
                     args = GetNext(args);
-                    DstPort = ParseArg<ushort>(args[0]);
-                    SrcPort = DstPort;
+                    Port = ParseArg<ushort>(args[0]);
                     break;
                 case "--port-source":
                     args = GetNext(args);

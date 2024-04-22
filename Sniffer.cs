@@ -53,9 +53,6 @@ public class Sniffer {
     }
 
     private SniffPacket? HandleEth(SniffPacket sp, EthernetPacket packet) {
-        // Can check ndppacket right away
-        var p = packet.Extract<NdpPacket>();
-        Console.WriteLine(p);
         return packet.Type switch {
             EthernetType.IPv6 => HandleIP(sp, packet.Extract<IPPacket>()),
             _ => HandleDefault(sp, packet),
@@ -63,10 +60,13 @@ public class Sniffer {
     }
 
     private SniffPacket? HandleIP(SniffPacket sp, IPPacket packet) {
+        sp.SrcIp = packet.SourceAddress;
+        sp.DstIp = packet.DestinationAddress;
+
         return packet.Protocol switch {
             ProtocolType.IcmpV6 =>
                 HandleIcmp6(sp, packet.Extract<IcmpV6Packet>()),
-            _ => HandleDefault(sp, packet),
+            _ => HandleDefaultIp(sp, packet),
         };
     }
 
@@ -79,7 +79,7 @@ public class Sniffer {
                 if (!Args.IsFiltered(Filter.Mld))
                     return null;
 
-                HandleDefault(sp, packet);
+                HandleDefaultIp(sp, packet);
                 break;
             /// NDP
             case IcmpV6Type.RouterSolicitation:
@@ -90,7 +90,7 @@ public class Sniffer {
                 if (!Args.IsFiltered(Filter.Ndp))
                     return null;
 
-                HandleDefault(sp, packet);
+                HandleDefaultIp(sp, packet);
                 break;
             default:
                 break;
@@ -100,6 +100,12 @@ public class Sniffer {
 
     private SniffPacket? HandleDefault(SniffPacket sp, Packet packet) {
         Ip(sp, packet);
+        Port(sp, packet);
+        sp.SetHexData(packet);
+        return sp;
+    }
+
+    private SniffPacket? HandleDefaultIp(SniffPacket sp, Packet packet) {
         Port(sp, packet);
         sp.SetHexData(packet);
         return sp;

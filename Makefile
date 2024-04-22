@@ -6,7 +6,7 @@ build:
 
 submit:
 	zip -r xsleza26.zip *.cs CHANGELOG.md ipk2-cd.drawio.png \
-		IPK-project2.csproj LICENSE Makefile README.md
+		IPK-project2.csproj LICENSE Makefile README.md tests/test.py
 
 clean:
 	-rm -rf bin obj ipk-sniffer xsleza26.zip
