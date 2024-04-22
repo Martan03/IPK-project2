@@ -1,7 +1,18 @@
 # IPK project 2 - ZETA
 
 ## Table of Contents
-{{ mdcon }}
+- [Project summary](#project-summary)
+- [PCAP library](#pcap-library)
+    - [Sniffed packet info](#sniffed-packet-info)
+- [Code overview:](#code-overview)
+    - [Class diagram](#class-diagram)
+    - [Args](#args)
+    - [Iface](#iface)
+    - [Sniffer](#sniffer)
+    - [SniffPacket](#sniffpacket)
+    - [Filter](#filter)
+- [Testing](#testing)
+- [Bibliography](#bibliography)
 
 ## Project summary
 This project implements packet sniffer in the terminal. Its basically Wireshark
@@ -12,6 +23,14 @@ and destination port (if packet uses ports).
 
 It is also possible to set number of packets to sniff/catch before quitting
 sniffing for next packets.
+
+## PCAP library
+Since I implement the project in C#, I used SharpPCAP library, which is very
+simple to use. I need to open the interface, which user select, and then
+assign function to `onPacketArrival` handler. This function ten parses the
+received packet, which is then parsed using PacketDotnet library, which is part
+of the SharpPCAP library. More detailed description of the implementation is
+in [code overview](#code-overview).
 
 ### Sniffed packet info
 When packet is sniffed and is supposed to be sniffed based on the filters,
@@ -71,7 +90,83 @@ need to change the binary path inside of the script)
 
 The scripts sniffs packets on `lo` interface.
 
+This is the output of the script:
+```
+UDP test
+.
+Sent 1 packets.
+.
+Sent 1 packets.
+Success
+
+UDP IPv6 test
+.
+Sent 1 packets.
+.
+Sent 1 packets.
+Success
+
+TCP test
+.
+Sent 1 packets.
+.
+Sent 1 packets.
+Success
+
+TCP IPv6 test
+.
+Sent 1 packets.
+.
+Sent 1 packets.
+Success
+
+ICMP test
+.
+Sent 1 packets.
+.
+Sent 1 packets.
+Success
+
+ICMP6 test
+.
+Sent 1 packets.
+.
+Sent 1 packets.
+Success
+
+ARP test
+.
+Sent 1 packets.
+.
+Sent 1 packets.
+Success
+
+NDP test
+.
+Sent 1 packets.
+.
+Sent 1 packets.
+Success
+
+NDP rs test
+.
+Sent 1 packets.
+.
+Sent 1 packets.
+Success
+
+MLD test
+.
+Sent 1 packets.
+.
+Sent 1 packets.
+Success
+```
+
 ## Bibliography
-- [SharpPCAP (library I used)](https://github.com/dotpcap/sharppcap)
-- [PacketDotnet (part of SharpPCAP)](https://github.com/dotpcap/packetnet)
-- [Tool for generating Table of Contents](https://github.com/Martan03/mdcon)
+- Library https://github.com/dotpcap/sharppcap
+- RFC 792 - Internet Control Message Protocol a RFC 4443 - ICMPv6
+- RFC 826 - ARP
+- RFC 5952 - A Recommendation for IPv6 Address Text Representation
+- RFC 3339 - Date and Time on the Internet: Timestamps
+- Wikipedia, the free encyclopedia: http://en.wikipedia.org/wiki/Pcap
