@@ -63,7 +63,13 @@ whether it contains expected values.
 I also send a different protocol type packet in order to check whether
 packet filtering works.
 
-The script name is `test.py` and can be seen in `tests` folder.
+The script name is `test.py` and can be seen in `tests` folder. To run the
+script, you will need to have `python3` installed as well as python package
+`scapy`. To run the scipt, you need `sudo` privileges
+(`sudo python3 test.py` - expects you're in `tests` folder, otherwise you will
+need to change the binary path inside of the script)
+
+The scripts sniffs packets on `lo` interface.
 
 ## Bibliography
 - [SharpPCAP (library I used)](https://github.com/dotpcap/sharppcap)
